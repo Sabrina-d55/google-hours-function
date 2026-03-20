@@ -25,7 +25,10 @@ export async function handler(event) {
 
   try {
     // 1. Check cached data first
-    const cached = await store.get(cacheKey, { type: "json" });
+    const cached = await store.get(cacheKey, {
+    type: "json",
+    consistency: "strong",
+    });
 
     if (cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_TTL) {
       return {
