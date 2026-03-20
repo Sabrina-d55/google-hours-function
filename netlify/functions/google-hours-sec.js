@@ -15,7 +15,11 @@ export async function handler(event) {
   }
 
   const API_KEY = process.env.GOOGLE_API_KEY_2;
-  const store = getStore("google-hours-cache");
+  const store = getStore({
+  name: "google-hours-cache",
+  siteID: process.env.NETLIFY_SITE_ID,
+  token: process.env.NETLIFY_BLOBS_TOKEN,
+  });
   const cacheKey = `hours-${placeId}`;
   const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
