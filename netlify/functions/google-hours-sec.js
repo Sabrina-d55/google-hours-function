@@ -21,22 +21,24 @@ export async function handler(event) {
   });
 
   const cacheKey = `hours-${placeId}`;
-  const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+  const CACHE_TTL = 2 * 60 * 60 * 1000; // ✅ 2h
 
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=current_opening_hours,opening_hours&key=${API_KEY}`;
 
   try {
-    // 👉 1. Check Blob cache first
     const cached = await store.get(cacheKey, { type: "json" });
 
     if (!forceRefresh && cached && cached.timestamp && Date.now() - cached.timestamp < CACHE_TTL) {
-      return response(200, {
-        hours: cached.hours,
-        source: "blob-cache",
-      }, "HIT");
+      return response(
+        200,
+        {
+          hours: cached.hours,
+          source: "blob-cache",
+        },
+        "HIT"
+      );
     }
 
-    // 👉 2. Fetch from Google (only if needed or forced)
     const res = await fetch(url);
     const data = await res.json();
 
@@ -49,16 +51,19 @@ export async function handler(event) {
       data.result.opening_hours?.weekday_text ||
       [];
 
-    // 👉 3. Store in Blob cache
     await store.setJSON(cacheKey, {
       hours,
       timestamp: Date.now(),
     });
 
-    return response(200, {
-      hours,
-      source: "google-api",
-    }, forceRefresh ? "FORCED" : "MISS");
+    return response(
+      200,
+      {
+        hours,
+        source: "google-api",
+      },
+      forceRefresh ? "FORCED" : "MISS"
+    );
 
   } catch (error) {
     return response(500, { error: error.message });
@@ -73,10 +78,9 @@ function response(status, body, cacheStatus = "") {
       "Access-Control-Allow-Origin": "*",
       "Content-Type": "application/json",
 
-      // ✅ 24h CDN cache + background refresh
-      "Cache-Control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=43200",
+      // ✅ 2h CDN cache
+      "Cache-Control": "public, max-age=7200, s-maxage=7200, stale-while-revalidate=3600",
 
-      // Optional debug
       "X-Cache": cacheStatus,
     },
     body: JSON.stringify(body),
